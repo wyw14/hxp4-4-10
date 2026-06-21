@@ -15,17 +15,19 @@ export class AudioManager {
   private currentSignalVolume: number = 0;
   private targetNoiseGain: number = 0;
   private targetSignalGain: number = 0;
-  private currentMasterGain: number = 0;
-  private targetMasterGain: number = 0;
 
   private signalFrequency: number = 0;
   private targetSignalFrequency: number = 0;
 
   private isInitialized: boolean = false;
   private isEnabled: boolean = false;
-  private fadeInProgress: boolean = false;
+
+  private readonly fadeDuration: number = 0.5;
+  private fadeStartGain: number = 0;
+  private fadeTargetGain: number = 0;
   private fadeStartTime: number = 0;
-  private fadeDuration: number = 0.5;
+  private fadeEndTime: number = 0;
+  private fadeActive: boolean = false;
 
   constructor() {}
 
@@ -85,20 +87,48 @@ export class AudioManager {
     }
   }
 
-  setEnabled(enabled: boolean): void {
-    if (this.isEnabled === enabled && !this.fadeInProgress) return;
-    
-    this.isEnabled = enabled;
-    this.fadeInProgress = true;
-    this.fadeStartTime = this.audioContext?.currentTime || 0;
-
-    if (this.masterGainNode && this.audioContext) {
-      const targetGain = enabled ? this.masterVolume : 0;
-      this.masterGainNode.gain.cancelScheduledValues(this.fadeStartTime);
-      this.masterGainNode.gain.setValueAtTime(this.currentMasterGain, this.fadeStartTime);
-      this.masterGainNode.gain.linearRampToValueAtTime(targetGain, this.fadeStartTime + this.fadeDuration);
-      this.targetMasterGain = targetGain;
+  private getCurrentMasterGain(): number {
+    if (!this.fadeActive || !this.audioContext) {
+      return this.fadeTargetGain;
     }
+    const now = this.audioContext.currentTime;
+    if (now >= this.fadeEndTime) {
+      return this.fadeTargetGain;
+    }
+    const t = (now - this.fadeStartTime) / (this.fadeEndTime - this.fadeStartTime);
+    const clampedT = Math.max(0, Math.min(1, t));
+    return this.fadeStartGain + (this.fadeTargetGain - this.fadeStartGain) * clampedT;
+  }
+
+  setEnabled(enabled: boolean): void {
+    if (!this.masterGainNode || !this.audioContext) return;
+
+    const now = this.audioContext.currentTime;
+    const currentGain = this.getCurrentMasterGain();
+    const targetGain = enabled ? this.masterVolume : 0;
+
+    if (Math.abs(currentGain - targetGain) < 0.0001) {
+      this.isEnabled = enabled;
+      this.fadeActive = false;
+      this.fadeTargetGain = targetGain;
+      return;
+    }
+
+    this.masterGainNode.gain.cancelScheduledValues(now);
+    this.masterGainNode.gain.setValueAtTime(currentGain, now);
+
+    const remainingFade = this.fadeActive ?
+      Math.max(0.08, this.fadeDuration * (1 - (now - this.fadeStartTime) / (this.fadeEndTime - this.fadeStartTime))) :
+      this.fadeDuration;
+
+    this.fadeStartGain = currentGain;
+    this.fadeTargetGain = targetGain;
+    this.fadeStartTime = now;
+    this.fadeEndTime = now + remainingFade;
+    this.fadeActive = true;
+    this.isEnabled = enabled;
+
+    this.masterGainNode.gain.linearRampToValueAtTime(targetGain, this.fadeEndTime);
   }
 
   toggle(): boolean {
@@ -117,8 +147,16 @@ export class AudioManager {
   setMasterVolume(volume: number): void {
     this.masterVolume = Math.max(0, Math.min(1, volume));
     if (this.isEnabled && this.masterGainNode && this.audioContext) {
-      this.targetMasterGain = this.masterVolume;
-      this.masterGainNode.gain.setTargetAtTime(this.masterVolume, this.audioContext.currentTime, 0.05);
+      const now = this.audioContext.currentTime;
+      const currentGain = this.getCurrentMasterGain();
+      this.masterGainNode.gain.cancelScheduledValues(now);
+      this.masterGainNode.gain.setValueAtTime(currentGain, now);
+      this.masterGainNode.gain.setTargetAtTime(this.masterVolume, now, 0.05);
+      this.fadeStartGain = currentGain;
+      this.fadeTargetGain = this.masterVolume;
+      this.fadeStartTime = now;
+      this.fadeEndTime = now + 0.2;
+      this.fadeActive = true;
     }
   }
 
@@ -158,7 +196,7 @@ export class AudioManager {
 
   setSignalTone(frequency: number, strength: number): void {
     this.targetSignalFrequency = frequency;
-    
+
     if (this.signalGainNode && this.audioContext) {
       const baseGain = strength > 0.6 ? strength * 0.06 : 0;
       this.targetSignalGain = baseGain * this.signalVolume;
@@ -171,18 +209,8 @@ export class AudioManager {
 
     const currentTime = this.audioContext.currentTime;
 
-    if (this.fadeInProgress && currentTime >= this.fadeStartTime + this.fadeDuration) {
-      this.fadeInProgress = false;
-      this.currentMasterGain = this.targetMasterGain;
-    }
-
-    if (!this.fadeInProgress) {
-      this.currentMasterGain += (this.targetMasterGain - this.currentMasterGain) * 0.1;
-    } else {
-      const fadeProgress = Math.min(1, (currentTime - this.fadeStartTime) / this.fadeDuration);
-      this.currentMasterGain = this.isEnabled ? 
-        this.targetMasterGain * fadeProgress : 
-        this.masterVolume * (1 - fadeProgress);
+    if (this.fadeActive && currentTime >= this.fadeEndTime) {
+      this.fadeActive = false;
     }
 
     this.currentNoiseVolume += (this.targetNoiseGain - this.currentNoiseVolume) * 0.05;
@@ -191,10 +219,15 @@ export class AudioManager {
     this.currentSignalVolume += (this.targetSignalGain - this.currentSignalVolume) * 0.05;
 
     const driftMax = 30 * this.freqDriftAmount;
-    const time = performance.now() * 0.008;
-    const wobble = Math.sin(time) * driftMax + Math.sin(time * 2.3) * driftMax * 0.3;
-    this.signalFrequency += (this.targetSignalFrequency + wobble - this.signalFrequency) * 0.1;
-    
+    let wobble = 0;
+    if (this.freqDriftAmount > 0.001) {
+      const time = performance.now() * 0.008;
+      wobble = Math.sin(time) * driftMax + Math.sin(time * 2.3) * driftMax * 0.3;
+    }
+
+    const freqSmooth = this.freqDriftAmount < 0.001 ? 0.3 : 0.1;
+    this.signalFrequency += (this.targetSignalFrequency + wobble - this.signalFrequency) * freqSmooth;
+
     if (this.signalOscillator) {
       this.signalOscillator.frequency.setValueAtTime(this.signalFrequency, currentTime);
     }

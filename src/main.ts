@@ -130,9 +130,12 @@ class Game {
       this.tuner[param] = value;
     });
 
+    this.initAudioUIFromManager();
+
     this.elements.mixerToggle.addEventListener('click', () => {
-      this.elements.mixerPanel.classList.toggle('active');
-      this.elements.mixerToggle.classList.toggle('active', this.elements.mixerPanel.classList.contains('active'));
+      const isActive = this.elements.mixerPanel.classList.toggle('active');
+      this.elements.mixerToggle.classList.toggle('active', isActive);
+      this.elements.mixerPanel.setAttribute('aria-hidden', (!isActive).toString());
     });
 
     this.elements.audioPower.addEventListener('click', async () => {
@@ -141,31 +144,31 @@ class Game {
       }
       this.audioManager.resume();
       const enabled = this.audioManager.toggle();
-      this.elements.audioPower.classList.toggle('active', enabled);
+      this.syncAudioPowerUI(enabled);
     });
 
     this.elements.noiseVolume.addEventListener('input', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       this.audioManager.setNoiseVolume(value / 100);
-      this.elements.noiseValue.textContent = `${value}%`;
+      this.updateSliderA11y(this.elements.noiseVolume, this.elements.noiseValue, value);
     });
 
     this.elements.signalVolume.addEventListener('input', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       this.audioManager.setSignalVolume(value / 100);
-      this.elements.signalValue.textContent = `${value}%`;
+      this.updateSliderA11y(this.elements.signalVolume, this.elements.signalValue, value);
     });
 
     this.elements.freqDrift.addEventListener('input', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       this.audioManager.setFreqDrift(value / 100);
-      this.elements.freqValue.textContent = `${value}%`;
+      this.updateSliderA11y(this.elements.freqDrift, this.elements.freqValue, value);
     });
 
     this.elements.masterVolume.addEventListener('input', (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
       this.audioManager.setMasterVolume(value / 100);
-      this.elements.masterValue.textContent = `${value}%`;
+      this.updateSliderA11y(this.elements.masterVolume, this.elements.masterValue, value);
     });
 
     window.addEventListener('resize', () => {
@@ -181,6 +184,39 @@ class Game {
     const response = await fetch('/signals.json');
     if (!response.ok) throw new Error('Failed to load signals');
     return response.json();
+  }
+
+  private initAudioUIFromManager(): void {
+    const noiseVal = Math.round(this.audioManager.getNoiseVolume() * 100);
+    this.elements.noiseVolume.value = noiseVal.toString();
+    this.updateSliderA11y(this.elements.noiseVolume, this.elements.noiseValue, noiseVal);
+
+    const signalVal = Math.round(this.audioManager.getSignalVolume() * 100);
+    this.elements.signalVolume.value = signalVal.toString();
+    this.updateSliderA11y(this.elements.signalVolume, this.elements.signalValue, signalVal);
+
+    const driftVal = Math.round(this.audioManager.getFreqDrift() * 100);
+    this.elements.freqDrift.value = driftVal.toString();
+    this.updateSliderA11y(this.elements.freqDrift, this.elements.freqValue, driftVal);
+
+    const masterVal = Math.round(this.audioManager.getMasterVolume() * 100);
+    this.elements.masterVolume.value = masterVal.toString();
+    this.updateSliderA11y(this.elements.masterVolume, this.elements.masterValue, masterVal);
+
+    this.syncAudioPowerUI(this.audioManager.getEnabled());
+    this.elements.mixerPanel.setAttribute('aria-hidden', 'true');
+  }
+
+  private syncAudioPowerUI(enabled: boolean): void {
+    this.elements.audioPower.classList.toggle('active', enabled);
+    this.elements.audioPower.setAttribute('aria-pressed', enabled.toString());
+  }
+
+  private updateSliderA11y(slider: HTMLInputElement, valueEl: HTMLElement, value: number): void {
+    const text = `${value}%`;
+    valueEl.textContent = text;
+    slider.setAttribute('aria-valuenow', value.toString());
+    slider.setAttribute('aria-valuetext', text);
   }
 
   private updateSignalMatch(): void {
@@ -268,8 +304,7 @@ class Game {
           : this.currentMatch.signal.id === 'signal_02' ? 440
           : this.currentMatch.signal.id === 'signal_03' ? 660
           : 330;
-        const wobble = Math.sin(performance.now() * 0.008) * 15;
-        this.audioManager.setSignalTone(baseFreq + wobble, this.smoothedStrength);
+        this.audioManager.setSignalTone(baseFreq, this.smoothedStrength);
       } else {
         this.audioManager.setSignalTone(0, 0);
       }

@@ -66,44 +66,48 @@
           </button>
         </div>
 
-        <div class="mixer-panel" id="mixerPanel">
+        <div class="mixer-panel" id="mixerPanel" role="region" aria-label="音频混音面板" aria-hidden="true">
           <div class="mixer-header">
             <span class="mixer-title">AUDIO MIXER</span>
-            <button class="mixer-power" id="audioPower">
+            <button class="mixer-power" id="audioPower" aria-label="音频电源开关" aria-pressed="false">
               <span class="power-icon">◉</span>
             </button>
           </div>
           
           <div class="mixer-controls">
             <div class="mixer-channel">
-              <div class="channel-label">WHITE NOISE</div>
+              <div class="channel-label" id="noiseLabel">WHITE NOISE</div>
               <div class="channel-slider-container">
-                <input type="range" class="channel-slider" id="noiseVolume" min="0" max="100" value="50" />
-                <div class="channel-value" id="noiseValue">50%</div>
+                <input type="range" class="channel-slider" id="noiseVolume" min="0" max="100" value="50"
+                       aria-labelledby="noiseLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50%" />
+                <div class="channel-value" id="noiseValue" aria-live="polite">50%</div>
               </div>
             </div>
 
             <div class="mixer-channel">
-              <div class="channel-label">SIGNAL TONE</div>
+              <div class="channel-label" id="signalLabel">SIGNAL TONE</div>
               <div class="channel-slider-container">
-                <input type="range" class="channel-slider" id="signalVolume" min="0" max="100" value="50" />
-                <div class="channel-value" id="signalValue">50%</div>
+                <input type="range" class="channel-slider" id="signalVolume" min="0" max="100" value="50"
+                       aria-labelledby="signalLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50%" />
+                <div class="channel-value" id="signalValue" aria-live="polite">50%</div>
               </div>
             </div>
 
             <div class="mixer-channel">
-              <div class="channel-label">FREQ DRIFT</div>
+              <div class="channel-label" id="driftLabel">FREQ DRIFT</div>
               <div class="channel-slider-container">
-                <input type="range" class="channel-slider" id="freqDrift" min="0" max="100" value="30" />
-                <div class="channel-value" id="freqValue">30%</div>
+                <input type="range" class="channel-slider" id="freqDrift" min="0" max="100" value="30"
+                       aria-labelledby="driftLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30" aria-valuetext="30%" />
+                <div class="channel-value" id="freqValue" aria-live="polite">30%</div>
               </div>
             </div>
 
             <div class="mixer-channel master">
-              <div class="channel-label">MASTER</div>
+              <div class="channel-label" id="masterLabel">MASTER</div>
               <div class="channel-slider-container">
-                <input type="range" class="channel-slider" id="masterVolume" min="0" max="100" value="70" />
-                <div class="channel-value" id="masterValue">70%</div>
+                <input type="range" class="channel-slider" id="masterVolume" min="0" max="100" value="70"
+                       aria-labelledby="masterLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70" aria-valuetext="70%" />
+                <div class="channel-value" id="masterValue" aria-live="polite">70%</div>
               </div>
             </div>
           </div>
