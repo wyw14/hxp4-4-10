@@ -60,10 +60,53 @@
             <span class="weather-icon">⛈</span>
             <span class="weather-label">STORM</span>
           </div>
-          <button class="power-button" id="audioToggle">
-            <span class="power-icon">◉</span>
-            <span class="power-label">AUDIO</span>
+          <button class="mixer-toggle" id="mixerToggle">
+            <span class="mixer-icon">🎚</span>
+            <span class="mixer-label">MIXER</span>
           </button>
+        </div>
+
+        <div class="mixer-panel" id="mixerPanel">
+          <div class="mixer-header">
+            <span class="mixer-title">AUDIO MIXER</span>
+            <button class="mixer-power" id="audioPower">
+              <span class="power-icon">◉</span>
+            </button>
+          </div>
+          
+          <div class="mixer-controls">
+            <div class="mixer-channel">
+              <div class="channel-label">WHITE NOISE</div>
+              <div class="channel-slider-container">
+                <input type="range" class="channel-slider" id="noiseVolume" min="0" max="100" value="50" />
+                <div class="channel-value" id="noiseValue">50%</div>
+              </div>
+            </div>
+
+            <div class="mixer-channel">
+              <div class="channel-label">SIGNAL TONE</div>
+              <div class="channel-slider-container">
+                <input type="range" class="channel-slider" id="signalVolume" min="0" max="100" value="50" />
+                <div class="channel-value" id="signalValue">50%</div>
+              </div>
+            </div>
+
+            <div class="mixer-channel">
+              <div class="channel-label">FREQ DRIFT</div>
+              <div class="channel-slider-container">
+                <input type="range" class="channel-slider" id="freqDrift" min="0" max="100" value="30" />
+                <div class="channel-value" id="freqValue">30%</div>
+              </div>
+            </div>
+
+            <div class="mixer-channel master">
+              <div class="channel-label">MASTER</div>
+              <div class="channel-slider-container">
+                <input type="range" class="channel-slider" id="masterVolume" min="0" max="100" value="70" />
+                <div class="channel-value" id="masterValue">70%</div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div class="instructions">

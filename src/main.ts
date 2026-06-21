@@ -39,7 +39,17 @@ class Game {
     signalDescription: HTMLElement;
     binaryStream: HTMLElement;
     foundCount: HTMLElement;
-    audioToggle: HTMLButtonElement;
+    mixerToggle: HTMLButtonElement;
+    mixerPanel: HTMLElement;
+    audioPower: HTMLButtonElement;
+    noiseVolume: HTMLInputElement;
+    noiseValue: HTMLElement;
+    signalVolume: HTMLInputElement;
+    signalValue: HTMLElement;
+    freqDrift: HTMLInputElement;
+    freqValue: HTMLElement;
+    masterVolume: HTMLInputElement;
+    masterValue: HTMLElement;
   };
 
   constructor() {
@@ -61,7 +71,17 @@ class Game {
       signalDescription: get('signalOverlay').querySelector('.signal-description') as HTMLElement,
       binaryStream: get('signalOverlay').querySelector('.binary-stream') as HTMLElement,
       foundCount: get('foundCount'),
-      audioToggle: get('audioToggle') as HTMLButtonElement
+      mixerToggle: get('mixerToggle') as HTMLButtonElement,
+      mixerPanel: get('mixerPanel'),
+      audioPower: get('audioPower') as HTMLButtonElement,
+      noiseVolume: get('noiseVolume') as HTMLInputElement,
+      noiseValue: get('noiseValue'),
+      signalVolume: get('signalVolume') as HTMLInputElement,
+      signalValue: get('signalValue'),
+      freqDrift: get('freqDrift') as HTMLInputElement,
+      freqValue: get('freqValue'),
+      masterVolume: get('masterVolume') as HTMLInputElement,
+      masterValue: get('masterValue')
     };
   }
 
@@ -110,13 +130,42 @@ class Game {
       this.tuner[param] = value;
     });
 
-    this.elements.audioToggle.addEventListener('click', async () => {
+    this.elements.mixerToggle.addEventListener('click', () => {
+      this.elements.mixerPanel.classList.toggle('active');
+      this.elements.mixerToggle.classList.toggle('active', this.elements.mixerPanel.classList.contains('active'));
+    });
+
+    this.elements.audioPower.addEventListener('click', async () => {
       if (!this.audioManager['isInitialized']) {
         await this.audioManager.init();
       }
       this.audioManager.resume();
       const enabled = this.audioManager.toggle();
-      this.elements.audioToggle.classList.toggle('active', enabled);
+      this.elements.audioPower.classList.toggle('active', enabled);
+    });
+
+    this.elements.noiseVolume.addEventListener('input', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      this.audioManager.setNoiseVolume(value / 100);
+      this.elements.noiseValue.textContent = `${value}%`;
+    });
+
+    this.elements.signalVolume.addEventListener('input', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      this.audioManager.setSignalVolume(value / 100);
+      this.elements.signalValue.textContent = `${value}%`;
+    });
+
+    this.elements.freqDrift.addEventListener('input', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      this.audioManager.setFreqDrift(value / 100);
+      this.elements.freqValue.textContent = `${value}%`;
+    });
+
+    this.elements.masterVolume.addEventListener('input', (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      this.audioManager.setMasterVolume(value / 100);
+      this.elements.masterValue.textContent = `${value}%`;
     });
 
     window.addEventListener('resize', () => {
